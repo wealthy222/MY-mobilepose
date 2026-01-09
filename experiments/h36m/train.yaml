@@ -22,7 +22,7 @@ DATASET:
   NUM_CAMS: 4
   #VOC: 'data/VOC2012' # If you want to use synthetic occlusion, please enter the VOC path
 MODEL:
-  NAME: pose3d_resnet
+  NAME: MobileNetV3_Large
   PRETRAINED: 'models/imagenet/resnet50-11ad3fa6.pth'            #'models/mpii_integral/model_best.pth.tar'
   RESUME: ''
   NUM_JOINTS: 17
@@ -39,7 +39,9 @@ MODEL:
     - 4
     - 4
     - 4
-    NUM_LAYERS: 50
+    MobileNetV3_Large:
+      WIDTH_MULT: 1.0
+      USE_SE: true
 LOSS:
   FN: SmoothL1JointLocationLoss
 TRAIN:
