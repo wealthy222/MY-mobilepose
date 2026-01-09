@@ -20,7 +20,7 @@ class H36M_Integral(JointsIntegralDataset):
     def __init__(self, cfg, root, image_set, is_train):
         super().__init__(cfg, root, image_set, is_train)
 
-        self.parent_ids = np.array([0, 0, 1, 2, 0, 4, 5, 0, 8, 8, 9, 8, 11, 12, 8, 14, 15], dtype=np.int)
+        self.parent_ids = np.array([0, 0, 1, 2, 0, 4, 5, 0, 8, 8, 9, 8, 11, 12, 8, 14, 15], dtype=int)
 
         self.cam_config = [[1, 2], [0, 3], [0, 3], [1, 2]] # Camera neighborhoods
 
@@ -31,10 +31,7 @@ class H36M_Integral(JointsIntegralDataset):
 
     def __getitem__(self, idx):
         if self.is_train and self.cfg.DATASET.TRI:
-            # select a random camera from db
-            cam_1 = np.random.randint(self.num_cams)
-            # select a neighboring camera
-            cam_2 = self.cam_config[cam_1][0] if random.random() <= 0.5 else self.cam_config[cam_1][1]
+            cam_1, cam_2 = random.sample(range(self.num_cams), 2)
 
             # get db records for each view
             db_rec_1 = copy.deepcopy(self.db[cam_1][idx])

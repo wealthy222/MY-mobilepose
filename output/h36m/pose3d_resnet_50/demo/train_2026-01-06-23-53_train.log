@@ -1,0 +1,101 @@
+2026-01-06 23:53:54,740 Namespace(cfg='experiments/h36m/train.yaml', frequent=100, gpus=None, workers=8)
+2026-01-06 23:53:54,740 {'CUDNN': {'BENCHMARK': True, 'DETERMINISTIC': False, 'ENABLED': True},
+ 'DATASET': {'BG_AUG': False,
+             'DATASET': 'h36m',
+             'DATA_FORMAT': 'jpg',
+             'DEPTH_RANGE': 2000,
+             'FLIP': False,
+             'HYBRID_JOINTS_TYPE': '',
+             'MPII_ORDER': False,
+             'NUM_CAMS': 4,
+             'OCCLUSION': False,
+             'ROOT': 'G:/human3.6',
+             'ROT_FACTOR': 30,
+             'SCALE_FACTOR': 0.25,
+             'SELECT_DATA': False,
+             'TEST_SET': 'valid',
+             'TRAIN_FRAME': 32,
+             'TRAIN_SET': 'train',
+             'TRI': True,
+             'VAL_FRAME': 64,
+             'VOC': '/media/muhammed/Other/RESEARCH/datasets/VOCdevkit/VOC2012',
+             'Z_WEIGHT': 1.0},
+ 'DATA_DIR': '',
+ 'DEBUG': {'DEBUG': False,
+           'SAVE_3D': False,
+           'SAVE_BATCH_IMAGES_GT': False,
+           'SAVE_BATCH_IMAGES_PRED': False,
+           'SAVE_HEATMAPS_GT': False,
+           'SAVE_HEATMAPS_PRED': False},
+ 'EXP_NAME': 'demo',
+ 'GPUS': '0',
+ 'LOG_DIR': 'log',
+ 'LOSS': {'DEPTH_LAMBDA': 1.0,
+          'FN': 'SmoothL1JointLocationLoss',
+          'NORM': False,
+          'USE_SOFT': True,
+          'USE_TARGET_WEIGHT': True},
+ 'MODEL': {'DEPTH_RES': 64,
+           'EXTRA': {'DECONV_WITH_BIAS': False,
+                     'FINAL_CONV_KERNEL': 1,
+                     'NUM_DECONV_FILTERS': [256, 256, 256],
+                     'NUM_DECONV_KERNELS': [4, 4, 4],
+                     'NUM_DECONV_LAYERS': 3,
+                     'NUM_LAYERS': 50},
+           'IMAGE_SIZE': [256, 256],
+           'INIT_WEIGHTS': True,
+           'NAME': 'pose3d_resnet',
+           'NUM_JOINTS': 17,
+           'PRETRAINED': 'models/imagenet/resnet50-11ad3fa6.pth',
+           'RESUME': '',
+           'VOLUME': True},
+ 'OUTPUT_DIR': 'output',
+ 'PRINT_FREQ': 100,
+ 'TEST': {'BATCH_SIZE': 2,
+          'BBOX_THRE': 1.0,
+          'COCO_BBOX_FILE': '',
+          'FLIP_TEST': False,
+          'IMAGE_THRE': 0.0,
+          'IN_VIS_THRE': 0.0,
+          'MODEL_FILE': '',
+          'NMS_THRE': 1.0,
+          'OKS_THRE': 0.5,
+          'POST_PROCESS': True,
+          'SHIFT_HEATMAP': True,
+          'USE_GT_BBOX': False},
+ 'TRAIN': {'BATCH_SIZE': 2,
+           'BEGIN_EPOCH': 0,
+           'CHECKPOINT': '',
+           'END_EPOCH': 50,
+           'GAMMA1': 0.99,
+           'GAMMA2': 0.0,
+           'LR': 0.00025,
+           'LR_FACTOR': 0.1,
+           'LR_STEP': [30, 40],
+           'MOMENTUM': 0.9,
+           'NESTEROV': False,
+           'OPTIMIZER': 'adam',
+           'RESUME': False,
+           'SHUFFLE': True,
+           'WD': 0.0001},
+ 'WORKERS': 8}
+2026-01-06 23:53:54,867 => init deconv weights from normal distribution
+2026-01-06 23:53:54,867 => init 0.weight as normal(0, 0.001)
+2026-01-06 23:53:54,868 => init 0.bias as 0
+2026-01-06 23:53:54,901 => init 1.weight as 1
+2026-01-06 23:53:54,901 => init 1.bias as 0
+2026-01-06 23:53:54,901 => init 3.weight as normal(0, 0.001)
+2026-01-06 23:53:54,901 => init 3.bias as 0
+2026-01-06 23:53:54,905 => init 4.weight as 1
+2026-01-06 23:53:54,905 => init 4.bias as 0
+2026-01-06 23:53:54,905 => init 6.weight as normal(0, 0.001)
+2026-01-06 23:53:54,905 => init 6.bias as 0
+2026-01-06 23:53:54,909 => init 7.weight as 1
+2026-01-06 23:53:54,909 => init 7.bias as 0
+2026-01-06 23:53:54,909 => init final conv weights from normal distribution
+2026-01-06 23:53:54,909 => init 8.weight as normal(0, 0.001)
+2026-01-06 23:53:54,909 => init 8.bias as 0
+2026-01-06 23:53:54,961 => loading pretrained imagenet model models/imagenet/resnet50-11ad3fa6.pth
+2026-01-06 23:53:56,235 => no resume model found, start training from scratch
+2026-01-06 23:54:01,516 => load 78047 samples
+2026-01-06 23:54:05,867 => load 108772 samples

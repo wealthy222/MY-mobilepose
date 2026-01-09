@@ -3,6 +3,7 @@ import os
 import pprint
 import shutil
 import _init_paths
+import math  # 余弦退火需要计算三角函数，必须导入
 
 import torch
 import torch.nn.parallel
@@ -21,10 +22,10 @@ from lib.utils.utils import get_optimizer
 from lib.utils.utils import save_checkpoint
 from lib.utils.utils import create_logger
 
+from lib.utils.cameras import Camera
 import lib.core.integral_loss as loss
 import lib.dataset as dataset
 import lib.models as models
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train keypoints network')
@@ -104,12 +105,17 @@ def main():
 
     optimizer = get_optimizer(config, model)
 
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, config.TRAIN.LR_STEP, config.TRAIN.LR_FACTOR
+    # 新代码：余弦退火LR（适配140轮长训练）
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=config.TRAIN.END_EPOCH,  # 总轮数=train.yaml里的END_EPOCH=140
+        eta_min=1e-6,  # 最小学习率，避免衰减到0
+        last_epoch=-1  # 从第0轮开始衰减
     )
 
     # Resume from a trained model
-    if not(config.MODEL.RESUME is ''):
+    # 修复核心：判断条件改成“只有RESUME非空时，才加载”
+    if config.MODEL.RESUME != '' and os.path.isfile(config.MODEL.RESUME):
         checkpoint = torch.load(config.MODEL.RESUME)
         if 'epoch' in checkpoint.keys():
             config.TRAIN.BEGIN_EPOCH = checkpoint['epoch']
@@ -120,6 +126,9 @@ def main():
         else:
             model.load_state_dict(checkpoint)
             logger.info('=> resume from pretrained model {}'.format(config.MODEL.RESUME))
+    else:
+        # 首次训练，RESUME为空，跳过加载，打印提示
+        logger.info('=> no resume model found, start training from scratch')
 
     # Choose the dataset, either Human3.6M or mpii
     ds = eval('dataset.'+config.DATASET.DATASET)
@@ -155,7 +164,6 @@ def main():
 
     best_model = False
     for epoch in range(config.TRAIN.BEGIN_EPOCH, config.TRAIN.END_EPOCH):
-        lr_scheduler.step()
 
         # train for one epoch
         train(config, train_loader, model, criterion, optimizer, epoch)
@@ -180,6 +188,7 @@ def main():
             'perf': perf_indicator,
             'optimizer': optimizer.state_dict(),
         }, best_model, final_output_dir)
+        lr_scheduler.step()
 
     final_model_state_file = os.path.join(final_output_dir,
                                           'final_state.pth.tar')

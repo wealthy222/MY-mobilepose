@@ -2,7 +2,7 @@ GPUS: '0'
 DATA_DIR: ''
 OUTPUT_DIR: 'output'
 LOG_DIR: 'log'
-WORKERS: 8
+WORKERS: 0     #原8
 PRINT_FREQ: 100
 EXP_NAME: 'fully_supervised'
 CUDNN:
@@ -11,16 +11,16 @@ CUDNN:
   ENABLED: True
 DATASET:
   DATASET: h36m
-  ROOT: 'data/h36m/'
+  ROOT: 'G:/human3.6'
   TEST_SET: valid
-  TRAIN_SET: train-fs
+  TRAIN_SET: train
   FLIP: false
-  TRI: false
+  TRI: true
   MPII_ORDER: false
 MODEL:
   NAME: pose3d_resnet
   PRETRAINED: ''
-  RESUME: 'models/h36m/fully_supervised.pth.tar'
+  #RESUME: 'models/h36m/fully_supervised.pth.tar'
   NUM_JOINTS: 17
   VOLUME: true
   EXTRA:
@@ -37,7 +37,7 @@ MODEL:
       - 4
     NUM_LAYERS: 50
 TEST:
-  BATCH_SIZE: 32
+  BATCH_SIZE: 2 #原32
   FLIP_TEST: false
   MODEL_FILE: ''
 DEBUG:

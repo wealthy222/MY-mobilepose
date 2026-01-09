@@ -44,19 +44,41 @@ def create_logger(cfg, cfg_name, phase='train'):
 
 def get_optimizer(cfg, model):
     optimizer = None
+    # 统一提取配置参数，避免重复写
+    lr = cfg.TRAIN.LR
+    weight_decay = cfg.TRAIN.WD
+    momentum = cfg.TRAIN.MOMENTUM
+    nesterov = cfg.TRAIN.NESTEROV
+    # Adam/AdamW的beta参数（复用config中的GAMMA1/GAMMA2，无则用默认值）
+    betas = (cfg.TRAIN.GAMMA1, 0.999) if hasattr(cfg.TRAIN, 'GAMMA1') else (0.9, 0.999)
+
     if cfg.TRAIN.OPTIMIZER == 'sgd':
         optimizer = optim.SGD(
             model.parameters(),
-            lr=cfg.TRAIN.LR,
-            momentum=cfg.TRAIN.MOMENTUM,
-            weight_decay=cfg.TRAIN.WD,
-            nesterov=cfg.TRAIN.NESTEROV
+            lr=lr,
+            momentum=momentum,
+            weight_decay=weight_decay,
+            nesterov=nesterov
         )
     elif cfg.TRAIN.OPTIMIZER == 'adam':
         optimizer = optim.Adam(
             model.parameters(),
-            lr=cfg.TRAIN.LR
+            lr=lr,
+            weight_decay=weight_decay,  # 【修复】原代码遗漏WD，新增后Adam的WD生效
+            betas=betas  # 新增beta参数，匹配config配置
         )
+    elif cfg.TRAIN.OPTIMIZER == 'adamw':  # 【新增】AdamW分支
+        optimizer = optim.AdamW(
+            model.parameters(),
+            lr=lr,
+            weight_decay=weight_decay,  # AdamW核心：独立权重衰减，长轮数更稳定
+            betas=betas,  # 复用beta配置，无需新增参数
+            eps=1e-8  # 默认值，保证数值稳定性
+        )
+
+    # 兜底：若optimizer未初始化（配置错误），抛出明确异常
+    if optimizer is None:
+        raise ValueError(f"Unsupported optimizer: {cfg.TRAIN.OPTIMIZER} (only support sgd/adam/adamw)")
 
     return optimizer
 

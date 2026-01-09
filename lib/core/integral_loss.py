@@ -58,9 +58,10 @@ def generate_3d_integral_preds_tensor(heatmaps, num_joints, x_dim, y_dim, z_dim)
     accu_z = heatmaps.sum(dim=3)
     accu_z = accu_z.sum(dim=3)
 
-    accu_x = accu_x * torch.cuda.comm.broadcast(torch.arange(float(x_dim)), devices=[accu_x.device.index])[0]
-    accu_y = accu_y * torch.cuda.comm.broadcast(torch.arange(float(y_dim)), devices=[accu_y.device.index])[0]
-    accu_z = accu_z * torch.cuda.comm.broadcast(torch.arange(float(z_dim)), devices=[accu_z.device.index])[0]
+    # 替换旧版broadcast用法，直接在目标设备创建张量
+    accu_x = accu_x * torch.arange(float(x_dim), device=accu_x.device)
+    accu_y = accu_y * torch.arange(float(y_dim), device=accu_y.device)
+    accu_z = accu_z * torch.arange(float(z_dim), device=accu_z.device)
 
     accu_x = accu_x.sum(dim=2, keepdim=True)
     accu_y = accu_y.sum(dim=2, keepdim=True)
@@ -188,8 +189,8 @@ def get_joint_location_result(patch_width, patch_height, preds):
     hm_width = preds.shape[-1]
     hm_height = preds.shape[-2]
 
-    hm_depth = hm_width
-    num_joints = preds.shape[1] // hm_depth
+    num_joints = 17  # 固定17个关节
+    hm_depth = preds.shape[1] // num_joints
 
     pred_jts = softmax_integral_tensor(preds, num_joints, True, hm_width, hm_height, hm_depth)
     coords = pred_jts.detach().cpu().numpy()
