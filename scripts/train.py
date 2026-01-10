@@ -97,6 +97,8 @@ def main():
     # define loss function (criterion) and optimizer
     loss_fn = eval('loss.'+config.LOSS.FN)
     criterion = loss_fn(num_joints=config.MODEL.NUM_JOINTS, norm=config.LOSS.NORM).cuda()
+    heatmap_criterion = loss.HeatmapCrossEntropyLoss(num_joints=17).cuda()
+    bone_criterion = loss.BoneLengthRegularizationLoss(num_joints=17).cuda()
 
     # define training, validation and evaluation routines
     train = train_integral
@@ -166,7 +168,7 @@ def main():
     for epoch in range(config.TRAIN.BEGIN_EPOCH, config.TRAIN.END_EPOCH):
 
         # train for one epoch
-        train(config, train_loader, model, criterion, optimizer, epoch)
+        train(config, train_loader, model, criterion, heatmap_criterion, bone_criterion, optimizer, epoch)
 
         # evaluate on validation set
         preds_in_patch_with_score = validate(valid_loader, model)

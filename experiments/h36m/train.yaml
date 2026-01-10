@@ -2,7 +2,7 @@ GPUS: '0'
 DATA_DIR: ''
 OUTPUT_DIR: 'output'
 LOG_DIR: 'log'
-WORKERS: 0    #原8
+WORKERS: 8    #原8
 PRINT_FREQ: 100
 EXP_NAME: 'demo'
 CUDNN:
@@ -22,8 +22,8 @@ DATASET:
   NUM_CAMS: 4
   #VOC: 'data/VOC2012' # If you want to use synthetic occlusion, please enter the VOC path
 MODEL:
-  NAME: MobileNetV3_Large
-  PRETRAINED: 'models/imagenet/resnet50-11ad3fa6.pth'            #'models/mpii_integral/model_best.pth.tar'
+  NAME: pose3d_mobilenetv3
+  PRETRAINED: 'models/imagenet/mobilenet_v3_large-8738ca79.pth'            #'models/mpii_integral/model_best.pth.tar'
   RESUME: ''
   NUM_JOINTS: 17
   VOLUME: true
@@ -39,30 +39,29 @@ MODEL:
     - 4
     - 4
     - 4
-    MobileNetV3_Large:
-      WIDTH_MULT: 1.0
-      USE_SE: true
+    WIDTH_MULT: 1.0
+    USE_SE: true
 LOSS:
   FN: SmoothL1JointLocationLoss
 TRAIN:
-  BATCH_SIZE: 2   #原来32
+  BATCH_SIZE: 32   #原来32
   SHUFFLE: true
   BEGIN_EPOCH: 0
-  END_EPOCH: 50  #原来140
+  END_EPOCH: 140  #原来140
   RESUME: false
   OPTIMIZER: adamw
-  LR: 0.00025     #原来0.001
+  LR: 0.001    #原来0.001
   LR_FACTOR: 0.1
   LR_STEP:
-  - 30        #原来90 120
-  - 40
+  - 90        #原来90 120
+  - 120
   WD: 0.0001
   GAMMA1: 0.99
   GAMMA2: 0.0
   MOMENTUM: 0.9
   NESTEROV: false
 TEST:
-  BATCH_SIZE: 2   #原来32
+  BATCH_SIZE: 32   #原来32
   FLIP_TEST: false
   MODEL_FILE: ''
 DEBUG:

@@ -3,7 +3,7 @@ import logging
 
 import torch
 import torch.nn as nn
-from .mobilenetv3 import MobileNetV3_Large
+from .pose3d_mobilenetv3 import MobileNetV3_Large
 
 BN_MOMENTUM = 0.1
 logger = logging.getLogger(__name__)

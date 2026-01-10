@@ -11,7 +11,7 @@ config.OUTPUT_DIR = ''
 config.LOG_DIR = ''
 config.DATA_DIR = ''
 config.GPUS = '0'
-config.WORKERS = 8
+config.WORKERS = 0
 config.PRINT_FREQ = 20
 config.EXP_NAME = 'default'
 
@@ -33,13 +33,24 @@ POSE_RESNET.TARGET_TYPE = 'gaussian'
 POSE_RESNET.HEATMAP_SIZE = [64, 64]  # width * height, ex: 24 * 32
 POSE_RESNET.SIGMA = 2
 
+# 新增：MobileNetV3 专属配置字典（适配你的3D姿态预测，复用反卷积配置）
+MOBILENET_V3 = edict()
+MOBILENET_V3.DECONV_WITH_BIAS = False  # 复用你的yaml配置
+MOBILENET_V3.NUM_DECONV_LAYERS = 3     # 复用你的yaml配置
+MOBILENET_V3.NUM_DECONV_FILTERS = [256, 256, 256]  # 复用你的yaml配置
+MOBILENET_V3.NUM_DECONV_KERNELS = [4, 4, 4]        # 复用你的yaml配置
+MOBILENET_V3.FINAL_CONV_KERNEL = 1                 # 复用你的yaml配置
+MOBILENET_V3.WIDTH_MULT = 1.0                      # MobileNetV3 专属宽度系数
+MOBILENET_V3.USE_SE = True                         # MobileNetV3 专属SE模块
+
 MODEL_EXTRAS = {
-	'pose3d_resnet': POSE_RESNET
+	'pose3d_resnet': POSE_RESNET,
+	'pose3d_mobilenetv3': MOBILENET_V3
 }
 
 # common params for NETWORK
 config.MODEL = edict()
-config.MODEL.NAME = 'pose3d_resnet'
+config.MODEL.NAME = 'pose3d_mobilenetv3'
 config.MODEL.INIT_WEIGHTS = True
 config.MODEL.PRETRAINED = ''
 config.MODEL.RESUME = ''
@@ -238,6 +249,18 @@ def get_model_name(cfg):
 		suffix = 'DR%s_S%s_DL%s'%(cfg.MODEL.DEPTH_RES,
 								  int(cfg.LOSS.USE_SOFT),
 								  int(cfg.LOSS.DEPTH_LAMBDA))
+		full_name = '{height}x{width}_{name}_{suffix}'.format(
+			height=cfg.MODEL.IMAGE_SIZE[1],
+			width=cfg.MODEL.IMAGE_SIZE[0],
+			name=name,
+			suffix=suffix)
+	elif name == 'pose3d_mobilenetv3':
+		suffix = 'DR%s_S%s_DL%s_W%s' % (
+			cfg.MODEL.DEPTH_RES,
+			int(cfg.LOSS.USE_SOFT),
+			int(cfg.LOSS.DEPTH_LAMBDA),
+			extra.WIDTH_MULT  # MobileNetV3 宽度系数后缀
+		)
 		full_name = '{height}x{width}_{name}_{suffix}'.format(
 			height=cfg.MODEL.IMAGE_SIZE[1],
 			width=cfg.MODEL.IMAGE_SIZE[0],

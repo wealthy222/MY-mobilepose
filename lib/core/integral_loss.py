@@ -219,3 +219,113 @@ def merge_flip_func(a, b, flip_pair):
 
 def get_merge_func(loss_config):
     return merge_flip_func
+
+# 新增：交叉熵热图损失类（适配你的MobileNetV3和H36M）
+class HeatmapCrossEntropyLoss(nn.Module):
+    def __init__(self, num_joints=17, use_soft=True, eps=1e-8):
+        super().__init__()
+        self.num_joints = num_joints
+        self.use_soft = use_soft  # 和你现有softmax逻辑对齐
+        self.eps = eps  # 避免log(0)报错
+
+    def forward(self, pred_heatmap, target_heatmap):
+        # 1. 可选：softmax（和你现有softmax_integral_tensor逻辑一致）
+        if self.use_soft:
+            batch_size = pred_heatmap.shape[0]
+            pred_flat = pred_heatmap.reshape(batch_size, -1)
+            pred_flat = F.softmax(pred_flat, dim=1)
+            pred_heatmap = pred_flat.reshape(pred_heatmap.shape)
+
+        # 2. 计算二元交叉熵损失（直接调用PyTorch API，简单高效）
+        return F.binary_cross_entropy(
+            input=pred_heatmap + self.eps,
+            target=target_heatmap + self.eps,
+            reduction='mean'
+        )
+
+
+# ===== 纯新增：骨长比例正则化损失（适配17关节H36M，保障生理合理性）=====
+class BoneLengthRegularizationLoss(nn.Module):
+    def __init__(self, num_joints=17, eps=1e-8):
+        super().__init__()
+        self.num_joints = num_joints
+        self.eps = eps
+
+        # 【关键】H36M 17关节标准骨骼连接对（父关节→子关节，符合人体生理结构）
+        # 索引对应H36M关节顺序：0-骨盆、1-右髋、2-右膝、3-右踝、4-左髋、5-左膝、6-左踝、7-躯干、8-胸部、9-颈部、10-头部、11-右肩、12-右肘、13-右腕、14-左肩、15-左肘、16-左腕
+        self.bone_pairs = [
+            (0, 1), (1, 2), (2, 3),  # 右侧下肢
+            (0, 4), (4, 5), (5, 6),  # 左侧下肢
+            (0, 7), (7, 8), (8, 9), (9, 10),  # 躯干+头部
+            (8, 11), (11, 12), (12, 13),  # 右侧上肢
+            (8, 14), (14, 15), (15, 16)  # 左侧上肢
+        ]
+
+    def _compute_bone_length(self, joints_3d):
+        """
+        计算骨骼长度（输入：关节3D坐标，形状(B, num_joints×3) 或 (B, num_joints, 3)）
+        输出：骨骼长度，形状(B, num_bones)
+        """
+        # 适配你的关节坐标维度（从热图积分输出的是(B, num_joints×3)，转换为(B, num_joints, 3)）
+        if len(joints_3d.shape) == 2:
+            joints_3d = joints_3d.reshape(-1, self.num_joints, 3)
+
+        bone_lengths = []
+        for (parent_idx, child_idx) in self.bone_pairs:
+            # 提取父关节和子关节的3D坐标
+            parent_joint = joints_3d[:, parent_idx, :]  # (B, 3)
+            child_joint = joints_3d[:, child_idx, :]  # (B, 3)
+
+            # 计算欧氏距离（骨骼长度），避免除零
+            bone_length = torch.norm(child_joint - parent_joint, dim=1, keepdim=True) + self.eps  # (B, 1)
+            bone_lengths.append(bone_length)
+
+        # 拼接所有骨骼长度，形状(B, num_bones)
+        return torch.cat(bone_lengths, dim=1)
+
+    def forward(self, pred_joints, gt_joints, joint_vis=None):
+        """
+        Args:
+            pred_joints: 预测3D关节坐标 (B, num_joints×3) 或 (B, num_joints, 3)
+            gt_joints: 真实3D关节坐标 (B, num_joints×3) 或 (B, num_joints, 3)
+            joint_vis: 关节可见性权重 (B, num_joints×3)（可选，过滤遮挡关节）
+        Returns:
+            骨长正则化损失（L1损失，和现有关节损失风格一致）
+        """
+        # 1. 计算预测骨骼长度和真实骨骼长度
+        pred_bone_lengths = self._compute_bone_length(pred_joints)
+        gt_bone_lengths = self._compute_bone_length(gt_joints)
+
+        # 2. 可选：根据关节可见性过滤遮挡骨骼（如果joint_vis不为空）
+        if joint_vis is not None:
+            # 转换关节可见性为骨骼可见性（父+子关节都可见，骨骼才有效）
+            joint_vis = joint_vis.reshape(-1, self.num_joints, 3)[:, :, 0]  # (B, num_joints)
+            bone_vis = []
+            for (parent_idx, child_idx) in self.bone_pairs:
+                bone_vis.append(joint_vis[:, parent_idx] * joint_vis[:, child_idx])  # 父+子都可见为1
+            bone_vis = torch.stack(bone_vis, dim=1)  # (B, num_bones)
+            # 加权过滤遮挡骨骼
+            pred_bone_lengths = pred_bone_lengths * bone_vis
+            gt_bone_lengths = gt_bone_lengths * bone_vis
+
+        # 3. 计算骨长L1损失（稳定，和现有L1/SmoothL1关节损失对齐）
+        bone_loss = torch.mean(torch.abs(pred_bone_lengths - gt_bone_lengths))
+
+        return bone_loss
+
+
+# ===== 新增：辅助函数（从热图转换为关节坐标，适配你的模型输出）=====
+def heatmap_to_joints(config, heatmap):
+    """
+    从模型输出的热图，转换为3D关节坐标（复用你的softmax_integral_tensor逻辑）
+    """
+    num_joints = config.MODEL.NUM_JOINTS
+    hm_width = heatmap.shape[-1]
+    hm_height = heatmap.shape[-2]
+    hm_depth = heatmap.shape[1] // num_joints
+
+    pred_joints = softmax_integral_tensor(
+        heatmap, num_joints, output_3d=True,
+        hm_width=hm_width, hm_height=hm_height, hm_depth=hm_depth
+    )
+    return pred_joints
